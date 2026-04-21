@@ -1,10 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import yfinance as yf
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
-import time
 
 st.set_page_config(
     page_title="Stock Analysis Tool",
@@ -14,110 +12,53 @@ st.set_page_config(
 
 st.title("📈 Stock Data Analysis Dashboard")
 st.markdown("### Track 4: Interactive Data Analysis Tool")
-st.write("This tool allows you to explore stock market data with real-time quotes from Yahoo Finance.")
+st.write("This tool allows you to explore stock market data with sample data for ACC102 assignment.")
 
 st.sidebar.header("Settings")
-ticker = st.sidebar.text_input("Enter stock ticker (e.g. AAPL, MSFT, TSLA)", "AAPL")
-
-st.sidebar.subheader("Date Range")
-days_options = {
-    "1 Month": 30,
-    "3 Months": 90,
-    "6 Months": 180,
-    "1 Year": 365,
-}
-selected_range = st.sidebar.selectbox("Select time period", list(days_options.keys()))
-days = days_options[selected_range]
+ticker = st.sidebar.text_input("Enter stock ticker (e.g. AAPL, MSFT)", "AAPL")
 
 end_date = datetime.now()
-start_date = end_date - timedelta(days=days)
+start_date = end_date - timedelta(days=180)
+dates = pd.date_range(start=start_date, end=end_date, freq='D')
 
-@st.cache_data(ttl=3600)
-def load_data(ticker_symbol, start, end):
-    try:
-        stock = yf.Ticker(ticker_symbol.upper())
-        df = stock.history(start=start, end=end)
-        return df, None
-    except Exception as e:
-        return None, str(e)
+base_price = 150
+prices = []
+current_price = base_price
+for _ in range(len(dates)):
+    change = np.random.normal(0, 0.5)
+    current_price += change
+    prices.append(max(current_price, 10))
 
-with st.spinner(f"Loading {ticker.upper()} data..."):
-    df, error = load_data(ticker, start_date, end_date)
+df = pd.DataFrame({
+    'Date': dates,
+    'Open': np.array(prices) * 1.01,
+    'High': np.array(prices) * 1.03,
+    'Low': np.array(prices) * 0.99,
+    'Close': np.array(prices),
+    'Adj Close': np.array(prices),
+    'Volume': np.random.randint(1000000, 5000000, size=len(dates))
+})
+df = df.round(2)
 
-if error:
-    st.error(f"⚠️ Failed to load data: {error}")
-    st.info("Please check the ticker symbol and try again.")
-elif df is None or df.empty:
-    st.warning(f"⚠️ No data found for '{ticker.upper()}'. Please try another ticker.")
-else:
-    st.subheader("Data Sample")
-    st.dataframe(df.head(10), use_container_width=True)
+st.subheader("Data Sample")
+st.dataframe(df.head(10), use_container_width=True)
 
-    st.subheader("Basic Statistics")
-    avg_price = df["Close"].mean()
-    max_price = df["High"].max()
-    min_price = df["Low"].min()
-    total_volume = df["Volume"].sum()
+st.subheader("Basic Statistics")
+avg_price = df["Close"].mean()
+st.write(f"📊 Average Closing Price: **$ {avg_price:.2f}**")
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Average Close Price", f"$ {avg_price:.2f}")
-    col2.metric("Highest Price", f"$ {max_price:.2f}")
-    col3.metric("Lowest Price", f"$ {min_price:.2f}")
-    col4.metric("Total Volume", f"{total_volume:,.0f}")
-
-    st.subheader("Price Trend Chart (Candlestick)")
-    fig = go.Figure()
-
-    fig.add_trace(go.Candlestick(
-        x=df.index,
-        open=df['Open'],
-        high=df['High'],
-        low=df['Low'],
-        close=df['Close'],
-        name='OHLC'
-    ))
-
-    fig.update_layout(
-        title=f"{ticker.upper()} Stock Price Trend",
-        xaxis_title="Date",
-        yaxis_title="Price (USD)",
-        xaxis_rangeslider_visible=False,
-        template="plotly_white",
-        height=500
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-    st.subheader("Trading Volume")
-    fig_vol = go.Figure()
-    fig_vol.add_trace(go.Bar(
-        x=df.index,
-        y=df['Volume'],
-        name='Volume',
-        marker_color='rgba(58, 142, 255, 0.6)'
-    ))
-    fig_vol.update_layout(
-        xaxis_title="Date",
-        yaxis_title="Volume",
-        template="plotly_white",
-        height=250
-    )
-    st.plotly_chart(fig_vol, use_container_width=True)
-
-
-    st.subheader("Download Data")
-    csv = df.to_csv(index=True)
-    st.download_button(
-        label="📥 Download Data as CSV",
-        data=csv,
-        file_name=f"{ticker.upper()}_stock_data.csv",
-        mime="text/csv"
-    )
+st.subheader("Price Trend Chart")
+fig, ax = plt.subplots(figsize=(10, 5))
+ax.plot(df['Date'], df['Close'], color='#1f77b4', linewidth=2, label='Close Price')
+ax.fill_between(df['Date'], df['Close'], alpha=0.2, color='#1f77b4')
+ax.set_title(f"{ticker} Stock Price Trend (Last 180 Days)")
+ax.set_xlabel("Date")
+ax.set_ylabel("Price (USD)")
+ax.grid(True, alpha=0.3)
+plt.xticks(rotation=45)
+ax.legend()
+st.pyplot(fig)
 
 st.markdown("---")
 st.write("📌 Built with Streamlit for ACC102 Track 4")
-st.write("📊 Data sourced from Yahoo Finance")
-
-
-
-
+st.write("📊 Data: Simulated sample data for demonstration purposes")
