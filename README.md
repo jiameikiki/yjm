@@ -27,7 +27,6 @@ The main objective of this project is to use Python and Streamlit to:
 
 The target users of this project are:
 
-- business and finance students (ACC102 Track 4)
 - beginner investors
 - users interested in learning how Python and Streamlit can be used for financial data analysis
 
